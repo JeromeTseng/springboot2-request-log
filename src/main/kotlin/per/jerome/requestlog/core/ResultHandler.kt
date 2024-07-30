@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
+import per.jerome.requestlog.model.Result
 import kotlin.Exception
 
 @RestControllerAdvice
@@ -61,7 +62,7 @@ class ResultHandler : ResponseBodyAdvice<Any> {
 
     }
 
-    @ExceptionHandler(Exception::class)
+    @ExceptionHandler(Throwable::class)
     @ResponseBody
     fun allExceptionHandler(ex: Exception): Result<String> {
         logger.error(ex.stackTraceToString())

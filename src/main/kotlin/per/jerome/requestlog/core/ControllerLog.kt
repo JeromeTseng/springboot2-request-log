@@ -2,6 +2,11 @@ package per.jerome.requestlog.core
 
 import cn.hutool.core.util.IdUtil
 import cn.hutool.json.JSONUtil
+import io.swagger.annotations.Api
+import io.swagger.annotations.ApiOperation
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
+import io.swagger.v3.oas.annotations.tags.Tags
 import org.aspectj.lang.JoinPoint
 import org.aspectj.lang.annotation.AfterReturning
 import org.aspectj.lang.annotation.AfterThrowing
@@ -21,7 +26,7 @@ import javax.servlet.http.HttpServletRequest
  */
 @Aspect
 @Component
-class ControllerLog{
+class ControllerLog {
     @Resource
     lateinit var request: HttpServletRequest
 
@@ -64,9 +69,9 @@ class ControllerLog{
         val logInfo = StringBuilder()
         logFormatBefore(logInfo)
         logInfo.append("服务执行操作 [ 开始 ]： -------START------- ")
-        logInfo.append("\n\t\t请求ID：[ $reqId ] ")
-        logInfo.append("\n\t\t请求IP：[ ${getRemoteIp()} ] ")
-        logInfo.append("\n\t\t请求方式及URI：[ ${request.method} - ${request.requestURI} ] ")
+        logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ $reqId ] ")
+        // 公共日志处理
+        commonLogHandle(logInfo,joinPoint)
         logInfo.append("\n\t\t执行服务：[ $serviceFullName ] ")
         // 请求参数拼接
         logRequestParameter(logInfo, joinPoint)
@@ -92,10 +97,9 @@ class ControllerLog{
         val logInfo = StringBuilder()
         logFormatBefore(logInfo)
         logInfo.append("服务执行操作 [ 结束 ]： -------END------- ")
-        logInfo.append("\n\t\t请求ID：[ ${requestId.get()} ] ")
-        // 打印请求的接口中文名
-        logInfo.append("\n\t\t请求IP：[ ${getRemoteIp()} ] ")
-        logInfo.append("\n\t\t请求方式及URI：[ ${request.method} - ${request.requestURI} ] ")
+        logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ ${requestId.get()} ] ")
+        // 公共日志处理
+        commonLogHandle(logInfo,joinPoint)
         // 控制层方法全路径名
         val serviceFullName = "${joinPoint.target.javaClass.name}.${method.name}"
         logInfo.append("\n\t\t执行服务：[ ").append(serviceFullName).append(" ] ")
@@ -162,6 +166,60 @@ class ControllerLog{
         }
     }
 
+    /**
+     * 获取到 controller 层配置的 Swagger 接口中文名
+     *
+     * 能一眼看出调用的什么接口
+     * @author 曾兴顺  2023/7/7
+     */
+    fun getApiName(joinPoint: JoinPoint): String? {
+        return joinPoint.run {
+            val javaClass = target.javaClass
+            val apiParentName = getApiParentName(javaClass)
+            val apiChildName = getApiChildName(joinPoint)
+            if(apiParentName == null && apiChildName == null){
+                null
+            }else{
+                "${apiParentName?:"未配置接口名称"} ### ${apiChildName?:"未配置方法名称"}"
+            }
+        }
+    }
+
+    /**
+     * 获取到 controller 层配置的 Swagger 接口父级名称
+     */
+    fun getApiParentName(javaClass:Class<Any>):String?{
+        return when {
+            javaClass.isAnnotationPresent(Api::class.java) -> {
+                val tags = javaClass.getAnnotation(Api::class.java).tags
+                if (tags.isNotEmpty()) tags.joinToString("-") else null
+            }
+            javaClass.isAnnotationPresent(Tag::class.java) -> {
+                javaClass.getAnnotation(Tag::class.java).name
+            }
+            javaClass.isAnnotationPresent(Tags::class.java) -> {
+                javaClass.getAnnotation(Tags::class.java).value.joinToString("-")
+            }
+            else -> null
+        }
+    }
+
+    /**
+     * 获取到 controller 层配置的 Swagger 接口子级名称
+     */
+    fun getApiChildName(joinPoint: JoinPoint):String?{
+        val method = (joinPoint.signature as MethodSignature).method
+        return when {
+            method.isAnnotationPresent(ApiOperation::class.java) -> {
+                method.getAnnotation(ApiOperation::class.java).value
+            }
+            method.isAnnotationPresent(Operation::class.java) -> {
+                method.getAnnotation(Operation::class.java).summary
+            }
+            else -> null
+        }
+    }
+
 
     /**
      * 打印前的分隔符
@@ -188,18 +246,34 @@ class ControllerLog{
     /**
      * 获取请求的IP地址
      */
-    private fun getRemoteIp():String{
-        var ipAddress = request.getHeader("X-Forwarded-For")
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equals(ipAddress,true)) {
-            ipAddress = request.getHeader("Proxy-Client-IP")
+    private fun getRemoteIp(): String {
+        try {
+            var ipAddress = request.getHeader("X-Forwarded-For")
+            if (ipAddress == null || ipAddress.isEmpty() || "unknown".equals(ipAddress, true)) {
+                ipAddress = request.getHeader("Proxy-Client-IP")
+            }
+            if (ipAddress == null || ipAddress.isEmpty() || "unknown".equals(ipAddress, true)) {
+                ipAddress = request.getHeader("WL-Proxy-Client-IP")
+            }
+            if (ipAddress == null || ipAddress.isEmpty() || "unknown".equals(ipAddress, true)) {
+                ipAddress = request.remoteAddr
+            }
+            return ipAddress.split(",")[0]
+        } catch (ex: Exception) {
+            return ex.message ?: "未知IP"
         }
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equals(ipAddress,true)) {
-            ipAddress = request.getHeader("WL-Proxy-Client-IP")
+    }
+
+    /**
+     * 共同日志打印
+     */
+    private fun commonLogHandle(logInfo:StringBuilder,joinPoint: JoinPoint){
+        // 打印请求的接口中文名
+        val apiName = getApiName(joinPoint)
+        if(apiName != null){
+            logInfo.append("\n\t\t接口名称：[ $apiName ] ")
         }
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equals(ipAddress,true)) {
-            ipAddress = request.remoteAddr
-        }
-        return ipAddress.split(",")[0]
+        logInfo.append("\n\t\t请求方式及URI：[ ${request.method} - ${request.requestURI} ] ")
     }
 
 }
