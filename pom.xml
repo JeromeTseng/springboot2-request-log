@@ -9,9 +9,9 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>per.jerome</groupId>
-    <artifactId>request-log</artifactId>
+    <artifactId>springboot-request-log</artifactId>
     <version>1.0.0</version>
-    <name>request-log</name>
+    <name>springboot-request-log</name>
     <description>请求日志打印框架</description>
     <properties>
         <java.version>11</java.version>
@@ -35,14 +35,12 @@
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi2-spring-boot-starter</artifactId>
             <version>4.4.0</version>
-            <scope>compile</scope>
         </dependency>
         <!-- knife4j springboot2 openApi3 -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi3-spring-boot-starter</artifactId>
             <version>4.4.0</version>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -68,7 +66,7 @@
     </dependencies>
 
     <build>
-        <finalName>request-log</finalName>
+        <finalName>springboot-request-log</finalName>
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
         <plugins>

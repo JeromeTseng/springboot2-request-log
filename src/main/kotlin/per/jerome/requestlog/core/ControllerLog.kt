@@ -15,8 +15,14 @@ import org.aspectj.lang.annotation.Before
 import org.aspectj.lang.reflect.MethodSignature
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.InitializingBean
+import org.springframework.core.env.Environment
+import org.springframework.core.env.get
 import org.springframework.stereotype.Component
 import java.lang.reflect.Parameter
+import java.net.Inet4Address
+import java.net.NetworkInterface
+import java.util.*
 import javax.annotation.Resource
 import javax.servlet.http.HttpServletRequest
 
@@ -26,9 +32,12 @@ import javax.servlet.http.HttpServletRequest
  */
 @Aspect
 @Component
-class ControllerLog {
+class ControllerLog : InitializingBean {
     @Resource
     lateinit var request: HttpServletRequest
+
+    @Resource
+    lateinit var environment: Environment
 
     // 日志记录器
     val log: Logger = LoggerFactory.getLogger(ControllerLog::class.java)
@@ -71,7 +80,7 @@ class ControllerLog {
         logInfo.append("服务执行操作 [ 开始 ]： -------START------- ")
         logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ $reqId ] ")
         // 公共日志处理
-        commonLogHandle(logInfo,joinPoint)
+        commonLogHandle(logInfo, joinPoint)
         logInfo.append("\n\t\t执行服务：[ $serviceFullName ] ")
         // 请求参数拼接
         logRequestParameter(logInfo, joinPoint)
@@ -99,7 +108,7 @@ class ControllerLog {
         logInfo.append("服务执行操作 [ 结束 ]： -------END------- ")
         logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ ${requestId.get()} ] ")
         // 公共日志处理
-        commonLogHandle(logInfo,joinPoint)
+        commonLogHandle(logInfo, joinPoint)
         // 控制层方法全路径名
         val serviceFullName = "${joinPoint.target.javaClass.name}.${method.name}"
         logInfo.append("\n\t\t执行服务：[ ").append(serviceFullName).append(" ] ")
@@ -177,10 +186,10 @@ class ControllerLog {
             val javaClass = target.javaClass
             val apiParentName = getApiParentName(javaClass)
             val apiChildName = getApiChildName(joinPoint)
-            if(apiParentName == null && apiChildName == null){
+            if (apiParentName == null && apiChildName == null) {
                 null
-            }else{
-                "${apiParentName?:"未配置接口名称"} ### ${apiChildName?:"未配置方法名称"}"
+            } else {
+                "${apiParentName ?: "未配置接口名称"} ### ${apiChildName ?: "未配置方法名称"}"
             }
         }
     }
@@ -188,18 +197,21 @@ class ControllerLog {
     /**
      * 获取到 controller 层配置的 Swagger 接口父级名称
      */
-    fun getApiParentName(javaClass:Class<Any>):String?{
+    fun getApiParentName(javaClass: Class<Any>): String? {
         return when {
             javaClass.isAnnotationPresent(Api::class.java) -> {
                 val tags = javaClass.getAnnotation(Api::class.java).tags
                 if (tags.isNotEmpty()) tags.joinToString("-") else null
             }
+
             javaClass.isAnnotationPresent(Tag::class.java) -> {
                 javaClass.getAnnotation(Tag::class.java).name
             }
+
             javaClass.isAnnotationPresent(Tags::class.java) -> {
                 javaClass.getAnnotation(Tags::class.java).value.joinToString("-")
             }
+
             else -> null
         }
     }
@@ -207,15 +219,17 @@ class ControllerLog {
     /**
      * 获取到 controller 层配置的 Swagger 接口子级名称
      */
-    fun getApiChildName(joinPoint: JoinPoint):String?{
+    fun getApiChildName(joinPoint: JoinPoint): String? {
         val method = (joinPoint.signature as MethodSignature).method
         return when {
             method.isAnnotationPresent(ApiOperation::class.java) -> {
                 method.getAnnotation(ApiOperation::class.java).value
             }
+
             method.isAnnotationPresent(Operation::class.java) -> {
                 method.getAnnotation(Operation::class.java).summary
             }
+
             else -> null
         }
     }
@@ -267,13 +281,56 @@ class ControllerLog {
     /**
      * 共同日志打印
      */
-    private fun commonLogHandle(logInfo:StringBuilder,joinPoint: JoinPoint){
+    private fun commonLogHandle(logInfo: StringBuilder, joinPoint: JoinPoint) {
         // 打印请求的接口中文名
         val apiName = getApiName(joinPoint)
-        if(apiName != null){
+        if (apiName != null) {
             logInfo.append("\n\t\t接口名称：[ $apiName ] ")
         }
         logInfo.append("\n\t\t请求方式及URI：[ ${request.method} - ${request.requestURI} ] ")
+    }
+
+    override fun afterPropertiesSet() {
+        val result = try {
+            // 尝试加载类
+            Class.forName("com.github.xiaoymin.knife4j.spring.annotations.EnableKnife4j")
+            true
+        } catch (e: ClassNotFoundException) {
+            false
+        }
+        if(result){
+            val port = environment["server.port"] ?: "8080"
+            val contextPath = environment["server.servlet.context-path"] ?: ""
+            val logInfo = StringBuilder()
+            logFormatBefore(logInfo)
+            logInfo.append("\t\tKnife4J 文档地址：http://${getHostAddresses()}:${port}${contextPath}/doc.html")
+            logFormatAfter(logInfo)
+            log.info(logInfo.toString())
+        }
+    }
+
+    fun getHostAddresses():String {
+        val addresses = mutableListOf<String>()
+        try {
+            // 获取本机所有网络接口
+            val networkInterfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
+            for (netInterface in networkInterfaces) {
+                // 排除虚拟网络接口（如环回接口）
+                if (!netInterface.isLoopback && netInterface.isUp) {
+                    val inetAddresses = Collections.list(netInterface.inetAddresses)
+
+                    for (inetAddress in inetAddresses) {
+                        // 只添加IPv4地址
+                        if (inetAddress is Inet4Address) {
+                            addresses.add(inetAddress.getHostAddress())
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            log.error(e.message)
+        }
+        return if(addresses.isEmpty()) "127.0.0.1" else addresses[0]
     }
 
 }
