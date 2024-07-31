@@ -189,7 +189,7 @@ class ControllerLog : InitializingBean {
             if (apiParentName == null && apiChildName == null) {
                 null
             } else {
-                "${apiParentName ?: "未配置接口名称"} ### ${apiChildName ?: "未配置方法名称"}"
+                "${if(apiParentName.isNullOrBlank()) "未配置接口名称" else apiParentName} ### ${if(apiChildName.isNullOrBlank()) "未配置方法名称" else apiChildName}"
             }
         }
     }
@@ -198,21 +198,35 @@ class ControllerLog : InitializingBean {
      * 获取到 controller 层配置的 Swagger 接口父级名称
      */
     fun getApiParentName(javaClass: Class<Any>): String? {
-        return when {
-            javaClass.isAnnotationPresent(Api::class.java) -> {
+        return try{
+            if (javaClass.isAnnotationPresent(Api::class.java)) {
                 val tags = javaClass.getAnnotation(Api::class.java).tags
-                if (tags.isNotEmpty()) tags.joinToString("-") else null
+                if (tags.isNotEmpty()) {
+                    tags.joinToString("-")
+                } else {
+                    javaClass.getAnnotation(Api::class.java).value
+                }
+            } else {
+                null
             }
-
-            javaClass.isAnnotationPresent(Tag::class.java) -> {
-                javaClass.getAnnotation(Tag::class.java).name
+        } catch (ex: Throwable) {
+            try {
+                if (javaClass.isAnnotationPresent(Tag::class.java)) {
+                    javaClass.getAnnotation(Tag::class.java).name
+                } else {
+                    null
+                }
+            } catch (ex: Throwable) {
+                try {
+                    if (javaClass.isAnnotationPresent(Tags::class.java)) {
+                        javaClass.getAnnotation(Tags::class.java).value.joinToString("-")
+                    } else {
+                        null
+                    }
+                } catch (ex: Throwable) {
+                    null
+                }
             }
-
-            javaClass.isAnnotationPresent(Tags::class.java) -> {
-                javaClass.getAnnotation(Tags::class.java).value.joinToString("-")
-            }
-
-            else -> null
         }
     }
 
@@ -221,16 +235,22 @@ class ControllerLog : InitializingBean {
      */
     fun getApiChildName(joinPoint: JoinPoint): String? {
         val method = (joinPoint.signature as MethodSignature).method
-        return when {
-            method.isAnnotationPresent(ApiOperation::class.java) -> {
+        return try{
+            if(method.isAnnotationPresent(ApiOperation::class.java)){
                 method.getAnnotation(ApiOperation::class.java).value
+            }else{
+                try{
+                    if(method.isAnnotationPresent(Operation::class.java)){
+                        method.getAnnotation(Operation::class.java).summary
+                    }else{
+                        null
+                    }
+                }catch (ex:Throwable){
+                    null
+                }
             }
-
-            method.isAnnotationPresent(Operation::class.java) -> {
-                method.getAnnotation(Operation::class.java).summary
-            }
-
-            else -> null
+        }catch (ex:Throwable){
+            null
         }
     }
 
@@ -283,11 +303,14 @@ class ControllerLog : InitializingBean {
      */
     private fun commonLogHandle(logInfo: StringBuilder, joinPoint: JoinPoint) {
         // 打印请求的接口中文名
-        val apiName = getApiName(joinPoint)
-        if (apiName != null) {
-            logInfo.append("\n\t\t接口名称：[ $apiName ] ")
+        try {
+            val apiName = getApiName(joinPoint)
+            if (apiName != null) {
+                logInfo.append("\n\t\t接口名称：[ $apiName ] ")
+            }
+        } finally {
+            logInfo.append("\n\t\t请求方式及URI：[ ${request.method} - ${request.requestURI} ] ")
         }
-        logInfo.append("\n\t\t请求方式及URI：[ ${request.method} - ${request.requestURI} ] ")
     }
 
     override fun afterPropertiesSet() {
@@ -298,7 +321,7 @@ class ControllerLog : InitializingBean {
         } catch (e: ClassNotFoundException) {
             false
         }
-        if(result){
+        if (result) {
             val port = environment["server.port"] ?: "8080"
             val contextPath = environment["server.servlet.context-path"] ?: ""
             val logInfo = StringBuilder()
@@ -309,7 +332,7 @@ class ControllerLog : InitializingBean {
         }
     }
 
-    fun getHostAddresses():String {
+    fun getHostAddresses(): String {
         val addresses = mutableListOf<String>()
         try {
             // 获取本机所有网络接口
@@ -330,7 +353,7 @@ class ControllerLog : InitializingBean {
         } catch (e: Exception) {
             log.error(e.message)
         }
-        return if(addresses.isEmpty()) "127.0.0.1" else addresses[0]
+        return if (addresses.isEmpty()) "127.0.0.1" else addresses[0]
     }
 
 }
