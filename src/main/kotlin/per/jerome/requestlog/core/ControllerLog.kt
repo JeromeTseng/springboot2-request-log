@@ -1,6 +1,7 @@
 package per.jerome.requestlog.core
 
 import cn.hutool.core.util.IdUtil
+import cn.hutool.core.util.StrUtil
 import cn.hutool.json.JSONUtil
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
@@ -19,6 +20,8 @@ import org.springframework.beans.factory.InitializingBean
 import org.springframework.core.env.Environment
 import org.springframework.core.env.get
 import org.springframework.stereotype.Component
+import per.jerome.requestlog.common.Constants.Companion.SWAGGER_RESOURCE
+import per.jerome.requestlog.common.Constants.Companion.isSwaggerResource
 import java.lang.reflect.Parameter
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -62,6 +65,9 @@ class ControllerLog : InitializingBean {
      */
     @Before(POINTCUT)
     fun beforeEnterController(joinPoint: JoinPoint) {
+        if (isSwaggerResource(request.requestURL.toString())) {
+            return
+        }
         // 生成请求ID
         val reqId = IdUtil.simpleUUID()
         // 设置请求ID
@@ -96,6 +102,9 @@ class ControllerLog : InitializingBean {
      */
     @AfterReturning(POINTCUT)
     fun afterFinishController(joinPoint: JoinPoint) {
+        if (isSwaggerResource(request.requestURL.toString())) {
+            return
+        }
         // 拿到方法信息
         val methodSignature = joinPoint.signature as MethodSignature
         val method = methodSignature.method
@@ -124,6 +133,9 @@ class ControllerLog : InitializingBean {
      */
     @AfterThrowing(value = POINTCUT, throwing = "ex")
     fun logAfterError(joinPoint: JoinPoint, ex: Exception) {
+        if (isSwaggerResource(request.requestURL.toString())) {
+            return
+        }
         val methodSignature = joinPoint.signature as MethodSignature
         val method = methodSignature.method
         // 如果有不记录日志的注解 则直接返回
@@ -189,7 +201,7 @@ class ControllerLog : InitializingBean {
             if (apiParentName == null && apiChildName == null) {
                 null
             } else {
-                "${if(apiParentName.isNullOrBlank()) "未配置接口名称" else apiParentName} ### ${if(apiChildName.isNullOrBlank()) "未配置方法名称" else apiChildName}"
+                "${if (apiParentName.isNullOrBlank()) "未配置接口名称" else apiParentName} ### ${if (apiChildName.isNullOrBlank()) "未配置方法名称" else apiChildName}"
             }
         }
     }
@@ -198,7 +210,8 @@ class ControllerLog : InitializingBean {
      * 获取到 controller 层配置的 Swagger 接口父级名称
      */
     fun getApiParentName(javaClass: Class<Any>): String? {
-        return try{
+
+        return try {
             if (javaClass.isAnnotationPresent(Api::class.java)) {
                 val tags = javaClass.getAnnotation(Api::class.java).tags
                 if (tags.isNotEmpty()) {
@@ -210,24 +223,26 @@ class ControllerLog : InitializingBean {
                 null
             }
         } catch (ex: Throwable) {
-            try {
+            null
+        }
+            ?: (try {
                 if (javaClass.isAnnotationPresent(Tag::class.java)) {
                     javaClass.getAnnotation(Tag::class.java).name
                 } else {
                     null
                 }
             } catch (ex: Throwable) {
-                try {
-                    if (javaClass.isAnnotationPresent(Tags::class.java)) {
-                        javaClass.getAnnotation(Tags::class.java).value.joinToString("-")
-                    } else {
-                        null
-                    }
-                } catch (ex: Throwable) {
+                null
+            } ?: try {
+                if (javaClass.isAnnotationPresent(Tags::class.java)) {
+                    javaClass.getAnnotation(Tags::class.java).value.joinToString("-")
+                } else {
                     null
                 }
-            }
-        }
+            } catch (ex: Throwable) {
+                null
+            })
+
     }
 
     /**
@@ -235,23 +250,24 @@ class ControllerLog : InitializingBean {
      */
     fun getApiChildName(joinPoint: JoinPoint): String? {
         val method = (joinPoint.signature as MethodSignature).method
-        return try{
-            if(method.isAnnotationPresent(ApiOperation::class.java)){
+        return try {
+            if (method.isAnnotationPresent(ApiOperation::class.java)) {
                 method.getAnnotation(ApiOperation::class.java).value
-            }else{
-                try{
-                    if(method.isAnnotationPresent(Operation::class.java)){
-                        method.getAnnotation(Operation::class.java).summary
-                    }else{
-                        null
-                    }
-                }catch (ex:Throwable){
-                    null
-                }
+            } else {
+                null
             }
-        }catch (ex:Throwable){
+        } catch (ex: Throwable) {
             null
         }
+            ?: try {
+                if (method.isAnnotationPresent(Operation::class.java)) {
+                    method.getAnnotation(Operation::class.java).summary
+                } else {
+                    null
+                }
+            } catch (ex: Throwable) {
+                null
+            }
     }
 
 
@@ -323,7 +339,9 @@ class ControllerLog : InitializingBean {
         }
         if (result) {
             val port = environment["server.port"] ?: "8080"
-            val contextPath = environment["server.servlet.context-path"] ?: ""
+            var contextPath = environment["server.servlet.context-path"] ?: ""
+            contextPath =
+                if (contextPath.last() == '/') contextPath.substring(0, contextPath.length - 1) else contextPath
             val logInfo = StringBuilder()
             logFormatBefore(logInfo)
             logInfo.append("\t\tKnife4J 文档地址：http://${getHostAddresses()}:${port}${contextPath}/doc.html")

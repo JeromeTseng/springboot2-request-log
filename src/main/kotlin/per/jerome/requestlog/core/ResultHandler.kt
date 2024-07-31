@@ -1,5 +1,6 @@
 package per.jerome.requestlog.core
 
+import cn.hutool.core.util.ArrayUtil
 import cn.hutool.core.util.StrUtil
 import cn.hutool.json.JSONUtil
 import org.slf4j.Logger
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
+import per.jerome.requestlog.common.Constants.Companion.SWAGGER_RESOURCE
+import per.jerome.requestlog.common.Constants.Companion.isSwaggerResource
 import per.jerome.requestlog.model.Result
 import kotlin.Exception
 
@@ -35,11 +38,11 @@ class ResultHandler : ResponseBodyAdvice<Any> {
         request: ServerHttpRequest,
         response: ServerHttpResponse
     ): Any? {
-        response.headers.contentType = MediaType.APPLICATION_JSON
         // 不对swagger资源作包裹
-        if (StrUtil.containsAny(request.uri.path, "swagger-resources", "v2/api-docs", "webjars", "swagger-ui.html")) {
+        if (isSwaggerResource(request.uri.path)) {
             return body
         }
+        response.headers.contentType = MediaType.APPLICATION_JSON
         // 消息体的类型为String类型会报错 将消息体包装后手动转成JSON
         if (body is String) {
             return JSONUtil.toJsonStr(Result.ok(body))
