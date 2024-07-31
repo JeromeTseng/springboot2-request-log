@@ -8,10 +8,10 @@
         <version>2.7.6</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>per.jerome</groupId>
-    <artifactId>springboot-request-log</artifactId>
+    <groupId>io.github.jerometseng</groupId>
+    <artifactId>springboot2-request-log</artifactId>
     <version>1.0.0</version>
-    <name>springboot-request-log</name>
+    <name>springboot2-request-log</name>
     <description>请求日志打印框架</description>
     <properties>
         <java.version>11</java.version>
@@ -24,11 +24,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <scope>compile</scope>
+            <scope>provided</scope>
         </dependency>
         <!-- knife4j springboot2 openApi2 -->
         <dependency>
@@ -68,7 +69,7 @@
     </dependencies>
 
     <build>
-        <finalName>springboot-request-log</finalName>
+        <finalName>springboot2-request-log</finalName>
         <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
         <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
         <plugins>

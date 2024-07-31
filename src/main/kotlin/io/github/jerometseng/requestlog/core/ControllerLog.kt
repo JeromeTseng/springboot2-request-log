@@ -1,4 +1,4 @@
-package per.jerome.requestlog.core
+package io.github.jerometseng.requestlog.core
 
 import cn.hutool.core.util.IdUtil
 import cn.hutool.json.JSONUtil
@@ -19,7 +19,7 @@ import org.springframework.beans.factory.InitializingBean
 import org.springframework.core.env.Environment
 import org.springframework.core.env.get
 import org.springframework.stereotype.Component
-import per.jerome.requestlog.common.Constants.Companion.isSwaggerResource
+import io.github.jerometseng.requestlog.common.Constants.Companion.isSwaggerResource
 import java.lang.reflect.Parameter
 import java.net.Inet4Address
 import java.net.NetworkInterface

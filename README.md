@@ -2,8 +2,8 @@
 * 下载代码并install到本地仓库后在pom中加入如下依赖：
 ```xml
 <dependency>
-    <groupId>per.jerome</groupId>
-    <artifactId>springboot-request-log</artifactId>
+    <groupId>io.github.jerometseng</groupId>
+    <artifactId>springboot2-request-log</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```
@@ -36,7 +36,7 @@
 
 ```java
 import org.springframework.web.bind.annotation.GetMapping;
-import per.jerome.requestlog.core.NoLog;
+import io.github.jerometseng.requestlog.core.NoLog;
 
 @GetMapping("/test")
 @NoLog
@@ -90,7 +90,7 @@ public class Test2Controller {
 
 ```java
 import org.springframework.web.bind.annotation.GetMapping;
-import per.jerome.requestlog.core.RawResponse;
+import io.github.jerometseng.requestlog.core.RawResponse;
 
 @GetMapping("/test")
 @RawResponse

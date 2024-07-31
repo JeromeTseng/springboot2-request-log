@@ -1,4 +1,4 @@
-package per.jerome.requestlog.core
+package io.github.jerometseng.requestlog.core
 
 /**
  * controller层的方法加了该注解就不会打印日志

@@ -1,8 +1,8 @@
-package per.jerome.requestlog.configure
+package io.github.jerometseng.requestlog.configure
 
 import org.springframework.context.annotation.Import
-import per.jerome.requestlog.core.ControllerLog
-import per.jerome.requestlog.core.ResultHandler
+import io.github.jerometseng.requestlog.core.ControllerLog
+import io.github.jerometseng.requestlog.core.ResultHandler
 
 
 @Target(AnnotationTarget.CLASS)

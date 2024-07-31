@@ -1,4 +1,4 @@
-package per.jerome.requestlog.model
+package io.github.jerometseng.requestlog.model
 
 /**
  * 请求返回的统一格式

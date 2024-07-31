@@ -1,4 +1,4 @@
-package per.jerome.requestlog.core
+package io.github.jerometseng.requestlog.core
 
 import cn.hutool.core.util.ArrayUtil
 import cn.hutool.core.util.StrUtil
@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
-import per.jerome.requestlog.common.Constants.Companion.SWAGGER_RESOURCE
-import per.jerome.requestlog.common.Constants.Companion.isSwaggerResource
-import per.jerome.requestlog.model.Result
+import io.github.jerometseng.requestlog.common.Constants.Companion.SWAGGER_RESOURCE
+import io.github.jerometseng.requestlog.common.Constants.Companion.isSwaggerResource
+import io.github.jerometseng.requestlog.model.Result
 import kotlin.Exception
 
 @RestControllerAdvice

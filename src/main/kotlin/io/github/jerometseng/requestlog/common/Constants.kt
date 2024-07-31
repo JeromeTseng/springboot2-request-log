@@ -1,4 +1,4 @@
-package per.jerome.requestlog.common
+package io.github.jerometseng.requestlog.common
 
 import cn.hutool.core.util.StrUtil
 

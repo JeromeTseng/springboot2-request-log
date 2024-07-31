@@ -1,4 +1,4 @@
-package per.jerome.requestlog.core
+package io.github.jerometseng.requestlog.core
 
 
 /**
