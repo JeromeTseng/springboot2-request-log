@@ -1,7 +1,6 @@
 package per.jerome.requestlog.core
 
 import cn.hutool.core.util.IdUtil
-import cn.hutool.core.util.StrUtil
 import cn.hutool.json.JSONUtil
 import io.swagger.annotations.Api
 import io.swagger.annotations.ApiOperation
@@ -20,12 +19,12 @@ import org.springframework.beans.factory.InitializingBean
 import org.springframework.core.env.Environment
 import org.springframework.core.env.get
 import org.springframework.stereotype.Component
-import per.jerome.requestlog.common.Constants.Companion.SWAGGER_RESOURCE
 import per.jerome.requestlog.common.Constants.Companion.isSwaggerResource
 import java.lang.reflect.Parameter
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.util.*
+import javax.annotation.PostConstruct
 import javax.annotation.Resource
 import javax.servlet.http.HttpServletRequest
 
@@ -372,6 +371,19 @@ class ControllerLog : InitializingBean {
             log.error(e.message)
         }
         return if (addresses.isEmpty()) "127.0.0.1" else addresses[0]
+    }
+
+    @PostConstruct
+    fun printBanner(){
+        // 生成地址
+        //https://patorjk.com/software/taag/?spm=a2c6h.12873639.article-detail.7.7acc2c9aiecGQi#p=display&f=Calvin%20S&t=REQUEST-LOG
+        // 生成类型：Calvin S
+        println("""${"\r\n"}
+            ╦═╗╔═╗╔═╗ ╦ ╦╔═╗╔═╗╔╦╗  ╦  ╔═╗╔═╗
+            ╠╦╝║╣ ║═╬╗║ ║║╣ ╚═╗ ║───║  ║ ║║ ╦
+            ╩╚═╚═╝╚═╝╚╚═╝╚═╝╚═╝ ╩   ╩═╝╚═╝╚═╝   - developed by JeromeTseng.
+            https://gitee.com/zengxingshun/springboot-request-log${"\r\n"}
+        """.trimIndent())
     }
 
 }
