@@ -42,7 +42,8 @@
 
     <scm>
         <connection>https://github.com/JeromeTseng/springboot2-request-log.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com:JeromeTseng/springboot2-request-log.git
+        <developerConnection>
+            scm:git:ssh://git@github.com:JeromeTseng/springboot2-request-log.git
         </developerConnection>
         <url>https://github.com/JeromeTseng/springboot2-request-log</url>
     </scm>
