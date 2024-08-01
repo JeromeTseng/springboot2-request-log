@@ -17,6 +17,7 @@ import org.aspectj.lang.reflect.MethodSignature
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.InitializingBean
+import org.springframework.boot.SpringBootVersion
 import org.springframework.core.env.Environment
 import org.springframework.core.env.get
 import org.springframework.stereotype.Component
@@ -328,6 +329,9 @@ class ControllerLog : InitializingBean {
         }
     }
 
+    /**
+     * 当环境变量设置完成后的回调
+     */
     override fun afterPropertiesSet() {
         val result = try {
             // 尝试加载类
@@ -349,6 +353,9 @@ class ControllerLog : InitializingBean {
         }
     }
 
+    /**
+     * 获取本机IP地址
+     */
     fun getHostAddresses(): String {
         val addresses = mutableListOf<String>()
         try {
@@ -382,8 +389,17 @@ class ControllerLog : InitializingBean {
             ╦═╗╔═╗╔═╗ ╦ ╦╔═╗╔═╗╔╦╗  ╦  ╔═╗╔═╗
             ╠╦╝║╣ ║═╬╗║ ║║╣ ╚═╗ ║───║  ║ ║║ ╦
             ╩╚═╚═╝╚═╝╚╚═╝╚═╝╚═╝ ╩   ╩═╝╚═╝╚═╝   - developed by JeromeTseng.
-            https://gitee.com/zengxingshun/springboot-request-log${"\r\n"}
+            https://gitee.com/zengxingshun/springboot2-request-log${"\r\n"}
         """.trimIndent())
+        val version = SpringBootVersion.getVersion()
+        if(version.startsWith("3")){
+            val text = """
+                您当前使用的SpringBoot版本为：$version.
+                但[springboot2-request-log]框架只在SpringBoot2.x中进行过详细测试.
+                在SpringBoot3.x环境中可能会出现未知问题，请悉知.
+            """.trimIndent()
+            println("\u001B[31m$text\u001B[0m")
+        }
     }
 
 }
