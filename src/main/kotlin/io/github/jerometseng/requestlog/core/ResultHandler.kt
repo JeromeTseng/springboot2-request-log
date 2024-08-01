@@ -1,8 +1,7 @@
 package io.github.jerometseng.requestlog.core
 
-import cn.hutool.core.util.ArrayUtil
-import cn.hutool.core.util.StrUtil
 import cn.hutool.json.JSONUtil
+import io.github.jerometseng.requestlog.common.Constants.isSwaggerResource
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.core.MethodParameter
@@ -15,8 +14,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice
-import io.github.jerometseng.requestlog.common.Constants.Companion.SWAGGER_RESOURCE
-import io.github.jerometseng.requestlog.common.Constants.Companion.isSwaggerResource
 import io.github.jerometseng.requestlog.model.Result
 import kotlin.Exception
 
