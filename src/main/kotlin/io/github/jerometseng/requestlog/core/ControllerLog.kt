@@ -102,28 +102,31 @@ class ControllerLog : InitializingBean {
      */
     @AfterReturning(POINTCUT)
     fun afterFinishController(joinPoint: JoinPoint) {
-        if (isSwaggerResource(request.requestURL.toString())) {
-            return
+        try{
+            if (isSwaggerResource(request.requestURL.toString())) {
+                return
+            }
+            // 拿到方法信息
+            val methodSignature = joinPoint.signature as MethodSignature
+            val method = methodSignature.method
+            // 如果有不记录日志的注解 则直接返回
+            if (method.isAnnotationPresent(NoLog::class.java))
+                return
+            // 拼接日志
+            val logInfo = StringBuilder()
+            logFormatBefore(logInfo)
+            logInfo.append("服务执行操作 [ 结束 ]： -------END------- ")
+            logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ ${requestId.get()} ] ")
+            // 公共日志处理
+            commonLogHandle(logInfo, joinPoint)
+            // 控制层方法全路径名
+            val serviceFullName = "${joinPoint.target.javaClass.name}.${method.name}"
+            logInfo.append("\n\t\t执行服务：[ ").append(serviceFullName).append(" ] ")
+            logFormatAfter(logInfo)
+            log.info(logInfo.toString())
+        }finally {
+            requestId.remove()
         }
-        // 拿到方法信息
-        val methodSignature = joinPoint.signature as MethodSignature
-        val method = methodSignature.method
-        // 如果有不记录日志的注解 则直接返回
-        if (method.isAnnotationPresent(NoLog::class.java))
-            return
-        // 拼接日志
-        val logInfo = StringBuilder()
-        logFormatBefore(logInfo)
-        logInfo.append("服务执行操作 [ 结束 ]： -------END------- ")
-        logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ ${requestId.get()} ] ")
-        // 公共日志处理
-        commonLogHandle(logInfo, joinPoint)
-        // 控制层方法全路径名
-        val serviceFullName = "${joinPoint.target.javaClass.name}.${method.name}"
-        logInfo.append("\n\t\t执行服务：[ ").append(serviceFullName).append(" ] ")
-        logFormatAfter(logInfo)
-        log.info(logInfo.toString())
-        requestId.remove()
     }
 
 
@@ -133,26 +136,29 @@ class ControllerLog : InitializingBean {
      */
     @AfterThrowing(value = POINTCUT, throwing = "ex")
     fun logAfterError(joinPoint: JoinPoint, ex: Exception) {
-        if (isSwaggerResource(request.requestURL.toString())) {
-            return
+        try{
+            if (isSwaggerResource(request.requestURL.toString())) {
+                return
+            }
+            val methodSignature = joinPoint.signature as MethodSignature
+            val method = methodSignature.method
+            // 如果有不记录日志的注解 则直接返回
+            if (method.isAnnotationPresent(NoLog::class.java))
+                return
+            // 日志拼接
+            val logInfo = StringBuilder()
+            logFormatBefore(logInfo)
+            logInfo.append("服务执行操作 [ 出错 ]： -------ERROR------- ")
+            logInfo.append("\n\t\t请求ID：[ ${requestId.get()} ] ")
+            logInfo.append("\n\t\t请求IP：[ ${getRemoteIp()} ] ")
+            logInfo.append("\n\t\t出错的服务接口：[ ${method.declaringClass.name}.${method.name} ] ")
+            // 拼装请求参数
+            logRequestParameter(logInfo, joinPoint)
+            logFormatAfter(logInfo)
+            log.error(logInfo.toString())
+        }finally {
+            requestId.remove()
         }
-        val methodSignature = joinPoint.signature as MethodSignature
-        val method = methodSignature.method
-        // 如果有不记录日志的注解 则直接返回
-        if (method.isAnnotationPresent(NoLog::class.java))
-            return
-        // 日志拼接
-        val logInfo = StringBuilder()
-        logFormatBefore(logInfo)
-        logInfo.append("服务执行操作 [ 出错 ]： -------ERROR------- ")
-        logInfo.append("\n\t\t请求ID：[ ${requestId.get()} ] ")
-        logInfo.append("\n\t\t请求IP：[ ${getRemoteIp()} ] ")
-        logInfo.append("\n\t\t出错的服务接口：[ ${method.declaringClass.name}.${method.name} ] ")
-        // 拼装请求参数
-        logRequestParameter(logInfo, joinPoint)
-        logFormatAfter(logInfo)
-        log.error(logInfo.toString())
-        requestId.remove()
     }
 
 
