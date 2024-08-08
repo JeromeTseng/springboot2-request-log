@@ -22,6 +22,8 @@ import org.springframework.core.env.Environment
 import org.springframework.core.env.get
 import org.springframework.stereotype.Component
 import java.lang.reflect.Parameter
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.util.*
@@ -48,15 +50,18 @@ class ControllerLog : InitializingBean {
     // 静态类
     companion object {
         // 记录 [ 请求线程ID ] 的线程隔离环境
-        var requestId = ThreadLocal<String>()
-
+        var requestIdTL = ThreadLocal<String>()
+        // 记录 [ 请求时间开始时间戳 ] 的线程隔离环境
+        var requestTimestampTL = ThreadLocal<Long>()
+        // 接口耗时除数
+        private val REQUEST_TIME_DIVISOR = BigDecimal("1000")
         // 切点定义
         private const val REQUEST = "@annotation(org.springframework.web.bind.annotation.RequestMapping)"
         private const val POST = "@annotation(org.springframework.web.bind.annotation.PostMapping)"
         private const val PUT = "@annotation(org.springframework.web.bind.annotation.PutMapping)"
         private const val DELETE = "@annotation(org.springframework.web.bind.annotation.DeleteMapping)"
         private const val GET = "@annotation(org.springframework.web.bind.annotation.GetMapping)"
-        const val POINTCUT = "$REQUEST || $POST || $PUT || $DELETE || $GET"
+        private const val POINTCUT = "$REQUEST || $POST || $PUT || $DELETE || $GET"
     }
 
     /**
@@ -65,18 +70,18 @@ class ControllerLog : InitializingBean {
      */
     @Before(POINTCUT)
     fun beforeEnterController(joinPoint: JoinPoint) {
+        // 设置请求ID
+        requestIdTL.set(IdUtil.simpleUUID())
+        // 设置请求开始时间
+        requestTimestampTL.set(System.currentTimeMillis())
         if (isSwaggerResource(request.requestURL.toString())) {
             return
         }
-        // 生成请求ID
-        val reqId = IdUtil.simpleUUID()
-        // 设置请求ID
-        requestId.set(reqId)
         // 拿到方法信息
         val methodSignature = joinPoint.signature as MethodSignature
         val method = methodSignature.method
         // 如果有不记录日志的注解 则直接返回
-        if (method.isAnnotationPresent(NoLog::class.java))
+        if (method.isAnnotationPresent(NoRequestLog::class.java))
             return
         // 控制层方法全路径名
         val serviceFullName = "${joinPoint.target.javaClass.name}.${method.name}"
@@ -84,7 +89,7 @@ class ControllerLog : InitializingBean {
         val logInfo = StringBuilder()
         logFormatBefore(logInfo)
         logInfo.append("服务执行操作 [ 开始 ]： -------START------- ")
-        logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ $reqId ] ")
+        logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ ${requestIdTL.get()} ] ")
         // 公共日志处理
         commonLogHandle(logInfo, joinPoint)
         logInfo.append("\n\t\t执行服务：[ $serviceFullName ] ")
@@ -110,22 +115,25 @@ class ControllerLog : InitializingBean {
             val methodSignature = joinPoint.signature as MethodSignature
             val method = methodSignature.method
             // 如果有不记录日志的注解 则直接返回
-            if (method.isAnnotationPresent(NoLog::class.java))
+            if (method.isAnnotationPresent(NoRequestLog::class.java))
                 return
             // 拼接日志
             val logInfo = StringBuilder()
             logFormatBefore(logInfo)
             logInfo.append("服务执行操作 [ 结束 ]： -------END------- ")
-            logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ ${requestId.get()} ] ")
+            logInfo.append("\n\t\t请求IP-ID：[ ${getRemoteIp()} ] - [ ${requestIdTL.get()} ] ")
             // 公共日志处理
             commonLogHandle(logInfo, joinPoint)
             // 控制层方法全路径名
             val serviceFullName = "${joinPoint.target.javaClass.name}.${method.name}"
             logInfo.append("\n\t\t执行服务：[ ").append(serviceFullName).append(" ] ")
+            // 接口耗时时间拼接
+            joinRequestTime(logInfo)
             logFormatAfter(logInfo)
             log.info(logInfo.toString())
         }finally {
-            requestId.remove()
+            requestIdTL.remove()
+            requestTimestampTL.remove()
         }
     }
 
@@ -143,21 +151,22 @@ class ControllerLog : InitializingBean {
             val methodSignature = joinPoint.signature as MethodSignature
             val method = methodSignature.method
             // 如果有不记录日志的注解 则直接返回
-            if (method.isAnnotationPresent(NoLog::class.java))
+            if (method.isAnnotationPresent(NoRequestLog::class.java))
                 return
             // 日志拼接
             val logInfo = StringBuilder()
             logFormatBefore(logInfo)
             logInfo.append("服务执行操作 [ 出错 ]： -------ERROR------- ")
-            logInfo.append("\n\t\t请求ID：[ ${requestId.get()} ] ")
+            logInfo.append("\n\t\t请求ID：[ ${requestIdTL.get()} ] ")
             logInfo.append("\n\t\t请求IP：[ ${getRemoteIp()} ] ")
             logInfo.append("\n\t\t出错的服务接口：[ ${method.declaringClass.name}.${method.name} ] ")
-            // 拼装请求参数
-            logRequestParameter(logInfo, joinPoint)
+            // 接口耗时时间拼接
+            joinRequestTime(logInfo)
             logFormatAfter(logInfo)
             log.error(logInfo.toString())
         }finally {
-            requestId.remove()
+            requestIdTL.remove()
+            requestTimestampTL.remove()
         }
     }
 
@@ -171,7 +180,7 @@ class ControllerLog : InitializingBean {
         val methodSignature = joinPoint.signature as MethodSignature
         val method = methodSignature.method
         // 如果有不记录日志的注解 则直接返回
-        if (method.isAnnotationPresent(NoLog::class.java))
+        if (method.isAnnotationPresent(NoRequestLog::class.java))
             return
         logInfo.append("\n\t\t访问参数列表：")
         // 请求参数拼接
@@ -296,6 +305,22 @@ class ControllerLog : InitializingBean {
         logInfo.append("\n")
         logInfo.append("<${"=".repeat(110)}>")
         logInfo.append("\n")
+    }
+
+    /**
+     * 拼接请求耗时时长
+     */
+    private fun joinRequestTime(logInfo: StringBuilder) {
+        val start = requestTimestampTL.get()
+        val now = System.currentTimeMillis()
+        val wasteTimePeriod = now - start
+        val wasteTime = if(wasteTimePeriod < 1000){
+            "$wasteTimePeriod ms"
+        }else{
+            val wasteTimeStr = BigDecimal(wasteTimePeriod.toString()).divide(REQUEST_TIME_DIVISOR,2,RoundingMode.HALF_UP).toString()
+            "$wasteTimeStr s"
+        }
+        logInfo.append("\n\t\t请求耗时：[ ").append(wasteTime).append(" ] ")
     }
 
 

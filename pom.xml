@@ -10,7 +10,7 @@
     </parent>
     <groupId>io.github.jerometseng</groupId>
     <artifactId>springboot2-request-log</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <name>springboot2-request-log</name>
     <description>
         针对SpringBoot2.x项目的可插拔式请求日志打印组件。

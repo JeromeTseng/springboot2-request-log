@@ -6,4 +6,4 @@ package io.github.jerometseng.requestlog.core
  */
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)
 @MustBeDocumented
-annotation class NoLog
+annotation class NoRequestLog
