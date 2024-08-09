@@ -66,6 +66,6 @@ class ResultHandler : ResponseBodyAdvice<Any> {
     @ResponseBody
     fun allExceptionHandler(ex: Exception): Result<String> {
         logger.error(ex.stackTraceToString())
-        return Result.fail(ex.message)
+        return Result.fail("${ex.javaClass.name}: ${ex.message}")
     }
 }

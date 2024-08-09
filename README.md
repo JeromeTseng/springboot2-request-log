@@ -4,7 +4,7 @@
 <dependency>
     <groupId>io.github.jerometseng</groupId>
     <artifactId>springboot2-request-log</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 * 在配置类或主启动类加上注解 `@EnableRequestLog` 即可开启请求日志打印

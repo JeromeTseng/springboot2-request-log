@@ -17,7 +17,6 @@ import org.aspectj.lang.reflect.MethodSignature
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.InitializingBean
-import org.springframework.boot.SpringBootVersion
 import org.springframework.core.env.Environment
 import org.springframework.core.env.get
 import org.springframework.stereotype.Component
@@ -143,7 +142,7 @@ class ControllerLog : InitializingBean {
      * @author 曾兴顺  2023/7/7
      */
     @AfterThrowing(value = POINTCUT, throwing = "ex")
-    fun logAfterError(joinPoint: JoinPoint, ex: Exception) {
+    fun logAfterError(joinPoint: JoinPoint, ex: Throwable) {
         try{
             if (isSwaggerResource(request.requestURL.toString())) {
                 return
@@ -160,6 +159,7 @@ class ControllerLog : InitializingBean {
             logInfo.append("\n\t\t请求ID：[ ${requestIdTL.get()} ] ")
             logInfo.append("\n\t\t请求IP：[ ${getRemoteIp()} ] ")
             logInfo.append("\n\t\t出错的服务接口：[ ${method.declaringClass.name}.${method.name} ] ")
+            logInfo.append("\n\t\t错误主信息：[ ${ex.javaClass.name}: ${ex.message} ] ")
             // 接口耗时时间拼接
             joinRequestTime(logInfo)
             logFormatAfter(logInfo)
@@ -422,15 +422,6 @@ class ControllerLog : InitializingBean {
             ╩╚═╚═╝╚═╝╚╚═╝╚═╝╚═╝ ╩   ╩═╝╚═╝╚═╝   - developed by JeromeTseng.
             https://gitee.com/zengxingshun/springboot2-request-log${"\r\n"}
         """.trimIndent())
-        val version = SpringBootVersion.getVersion()
-        if(version.startsWith("3")){
-            val text = """
-                您当前使用的SpringBoot版本为：$version.
-                但[springboot2-request-log]框架只在SpringBoot2.x中进行过详细测试.
-                在SpringBoot3.x环境中可能会出现未知问题，请悉知.
-            """.trimIndent()
-            println("\u001B[31m$text\u001B[0m")
-        }
     }
 
 }
